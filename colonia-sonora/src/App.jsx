@@ -61,21 +61,62 @@ function App() {
     if (primerLugar) setLugarActivoId(primerLugar.id);
   }
 
+  function explorar(filtroId = 'todos') {
+    cambiarFiltro(filtroId);
+    document.getElementById('exploracion')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
   const busquedaMusical = encodeURIComponent(`${lugarActivo.nombre} Colonia del Sacramento música canción`);
 
   return (
     <main className="sonora-app">
       <header className="site-header">
         <a className="brand" href="#inicio" aria-label="Colonia Sonora, inicio">
-          <span className="brand-mark" aria-hidden="true">cs</span>
-          <span className="brand-name">colonia<span>sonora</span></span>
+          <svg className="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M7 42h34M10 40V20l14-12 14 12v20M16 40V25h16v15M21 40V29h6v11M7 20h34M19 16h10M23 8V4h2v4" />
+            <path d="M5 42V18l19-15 19 15v24" />
+          </svg>
+          <span className="brand-lockup">
+            <span className="brand-name">ECOS<br />COLONIA</span>
+            <span className="brand-tagline">A TRAVÉS DE LA MÚSICA</span>
+          </span>
         </a>
-        <div className="header-note"><span className="live-dot" /> UN MAPA PARA ESCUCHAR
-          <span className="header-place">Colonia del Sacramento, Uruguay</span>
-        </div>
+        <a className="login-link" href="#exploracion">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="6" r="3" /><path d="M4.5 16c.5-3 2.4-4.5 5.5-4.5s5 1.5 5.5 4.5" /></svg>
+          Ingresar
+        </a>
       </header>
 
-      <section className="explorer" id="inicio" aria-labelledby="page-title">
+      <section className="hero" id="inicio" aria-labelledby="hero-title">
+        <div className="hero-content">
+          <h1 id="hero-title">DESCUBRÍ COLONIA</h1>
+          <p>A TRAVÉS DE LA MÚSICA</p>
+          <button className="hero-cta" type="button" onClick={() => explorar()}>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18s6-5.7 6-10a6 6 0 1 0-12 0c0 4.3 6 10 6 10Z" /><circle cx="10" cy="8" r="2" /></svg>
+            EXPLORAR MAPA
+          </button>
+        </div>
+      </section>
+
+      <section className="quick-explore" aria-labelledby="quick-explore-title">
+        <h2 id="quick-explore-title">¿Qué querés descubrir?</h2>
+        <div className="quick-links">
+          <button className="quick-link quick-link-places" type="button" onClick={() => explorar('todos')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-7.6 8-13a8 8 0 1 0-16 0c0 5.4 8 13 8 13Z" /><circle cx="12" cy="9" r="2.5" /></svg>
+            Lugares
+          </button>
+          <button className="quick-link quick-link-music" type="button" onClick={() => explorar('cancion')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 18V5l11-2v13M10 8l11-2" /><ellipse cx="6.5" cy="18.5" rx="3.5" ry="2.5" /><ellipse cx="17.5" cy="16.5" rx="3.5" ry="2.5" /></svg>
+            Música
+          </button>
+          <button className="quick-link quick-link-routes" type="button" onClick={() => explorar('todos')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c4-8 10-8 14-14M5 19h5m9-14h-5" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="5" r="2" /><path d="M12 7v5m-2-3h4" /></svg>
+            Recorridos
+          </button>
+        </div>
+      </section>
+
+      <section className="explorer" id="exploracion" aria-labelledby="page-title">
         <div className="explorer-heading">
           <div>
             <p className="eyebrow">GEOGRAFÍA EN FRECUENCIA</p>
