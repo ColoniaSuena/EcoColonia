@@ -19,25 +19,23 @@ npm run build
 
 Vite crea el sitio listo para publicar en `dist/`.
 
-## Publicar en Netlify
+## Publicar en Vercel
 
-### Conectar GitHub
+### Importar desde GitHub
 
 1. Subí el repositorio a GitHub.
-2. En Netlify, elegí **Add new site** y luego **Import an existing project**. Conectá GitHub y seleccioná el repositorio.
-3. Si la raíz del repositorio es la carpeta contenedora `EcoColonia`, configurá **Base directory** como `colonia-sonora`. Si el repositorio ya empieza dentro de `colonia-sonora`, dejá la base vacía.
-4. Usá `npm run build` como **Build command** y `dist` como **Publish directory**.
-5. Elegí **Deploy site**. Netlify publicará el sitio y te dará una URL `netlify.app`. Los siguientes cambios enviados a la rama conectada se publicarán automáticamente.
+2. En Vercel, elegí **Add New...** > **Project**, conectá GitHub e importá el repositorio.
+3. Configurá **Root Directory** según cómo subiste el proyecto:
+	- Si la raíz del repositorio contiene la carpeta `EcoColonia`, seleccioná `colonia-sonora`.
+	- Si la raíz del repositorio ya es la carpeta `colonia-sonora`, dejá `./` como directorio raíz.
+4. Seleccioná **Vite** como framework si Vercel no lo detecta automáticamente. Usá `npm run build` como **Build Command** y `dist` como **Output Directory**.
+5. Elegí **Deploy**. Vercel compilará el sitio y te dará una URL `vercel.app`. Los siguientes cambios enviados a la rama conectada se publicarán automáticamente.
 
-### Publicar una compilación manual
-
-Ejecutá `npm run build` en esta carpeta y cargá la carpeta `dist/` desde la opción de despliegue manual de Netlify. Esta opción no conecta GitHub ni publica automáticamente los cambios futuros.
-
-## Conectar un dominio `.app`
+## Conectar un dominio `.app` en Vercel
 
 1. Registrá el dominio que quieras en un registrador que venda dominios `.app`.
-2. En Netlify, abrí el sitio y entrá en **Domain management** (o **Domain settings**) > **Add a domain**. Escribí el dominio y seguí la verificación.
-3. Netlify mostrará qué registros DNS necesita. Copialos exactamente en la configuración DNS del registrador; los valores dependen del dominio y del método de conexión.
-4. Esperá a que Netlify confirme el DNS y emita el certificado TLS. Activá **HTTPS** como dominio principal cuando esté disponible.
+2. En el proyecto de Vercel, abrí **Settings** > **Domains**, agregá el dominio y seguí las instrucciones de verificación.
+3. Vercel mostrará los registros DNS necesarios. Copialos exactamente en la configuración DNS del registrador; los valores dependen del dominio y de la configuración de Vercel.
+4. Esperá a que Vercel confirme el DNS y active HTTPS para el dominio.
 
-Los dominios `.app` requieren HTTPS. No cambies los servidores DNS ni elimines registros existentes sin revisar primero las instrucciones que muestre Netlify.
+Los dominios `.app` requieren HTTPS. No cambies los servidores DNS ni elimines registros existentes sin revisar primero las instrucciones que muestre Vercel.
