@@ -33,7 +33,14 @@ const lugares = [
     categoria: 'cancion',
     tipo: 'Canción sobre el lugar',
     coordenadas: [-34.474, -57.846],
-    detalle: 'Canciones para escuchar junto al río y relatos musicales de la rambla.',
+    detalle: 'https://www.youtube.com/watch?v=8nx-G-VMt5A',
+  },
+  { id: 'El General',
+    nombre: 'El General',
+    categoria: 'artista',
+    tipo: 'Luana Persincula (Luana)',
+    coordenadas: [-34.450060, -57.816829],
+    detalle: 'Un artista local que ha dejado su huella en la música de Colonia.',
   },
 ];
 
