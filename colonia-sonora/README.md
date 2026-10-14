@@ -34,10 +34,11 @@ La aplicación usa Supabase Auth para el registro público por correo y contrase
    VITE_SUPABASE_ANON_KEY=tu-clave-publicable
    ```
 
-   La clave pública/publishable está diseñada para el navegador y queda protegida por las políticas RLS. **No uses ni publiques la clave `service_role` o una clave secreta.**
-4. Configurá **Authentication** > **URL Configuration** con la URL local `http://localhost:5173` para desarrollo y la URL de producción de Vercel para el sitio publicado. Agregá ambas a **Redirect URLs** para que funcionen la confirmación por correo y la recuperación de contraseña.
-5. Reiniciá `npm run dev` después de cambiar las variables de entorno.
-6. En Vercel, abrí **Project Settings** > **Environment Variables** y agregá `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` para **Production**, **Preview** y **Development** según corresponda. Después de guardarlas, volvé a desplegar el proyecto.
+   Usá la URL base del proyecto (sin `/rest/v1`) y la clave pública/publishable, diseñada para el navegador y protegida por las políticas RLS. **No uses ni publiques la clave `service_role` o una clave secreta.**
+4. En **Authentication** > **Sign In / Providers** > **Email**, habilitá la confirmación de correo para que cada cuenta nueva tenga que validar su dirección antes de ingresar. Para que los mensajes de confirmación lleguen a cualquier usuario, configurá un proveedor SMTP propio en **Authentication** > **SMTP Settings**; el envío predeterminado de Supabase tiene restricciones de destinatarios y frecuencia.
+5. En **Authentication** > **URL Configuration**, configurá `https://eco-colonia.vercel.app` como **Site URL** y agregá `http://localhost:5173` y `https://eco-colonia.vercel.app` a **Redirect URLs**. El registro envía el enlace de validación a la dirección desde la que se creó la cuenta.
+6. Reiniciá `npm run dev` después de cambiar las variables de entorno.
+7. En Vercel, abrí **Project Settings** > **Environment Variables** y agregá `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` para **Production**, **Preview** y **Development** según corresponda. Usá la misma URL base (sin `/rest/v1`). Después de guardarlas, volvé a desplegar el proyecto.
 
 ### Promover la primera cuenta administradora
 

@@ -5,6 +5,7 @@ function AuthPanel({ onClose, initialMode = 'login' }) {
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,6 +18,10 @@ function AuthPanel({ onClose, initialMode = 'login' }) {
       setError('La autenticación todavía no está configurada. Revisá las variables de Supabase.');
       return;
     }
+    if (mode === 'signup' && password !== confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -24,12 +29,13 @@ function AuthPanel({ onClose, initialMode = 'login' }) {
         const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+          options: { emailRedirectTo: window.location.origin },
         });
         if (authError) throw authError;
         if (data.session) {
           onClose();
         } else {
-          setNotice('Te enviamos un correo para confirmar tu cuenta antes de iniciar sesión.');
+          setNotice('Te enviamos un correo de validación. Confirmá tu dirección desde ese mensaje antes de ingresar; revisá también la carpeta de correo no deseado.');
           setMode('login');
         }
       } else if (mode === 'reset') {
@@ -106,6 +112,20 @@ function AuthPanel({ onClose, initialMode = 'login' }) {
                 required
               />
               {(mode === 'signup' || mode === 'update') && <small>Usá al menos 8 caracteres.</small>}
+            </>
+          )}
+          {mode === 'signup' && (
+            <>
+              <label htmlFor="account-confirm-password">Repetir contraseña</label>
+              <input
+                id="account-confirm-password"
+                autoComplete="new-password"
+                type="password"
+                minLength={8}
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                required
+              />
             </>
           )}
           {error && <p className="account-message is-error" role="alert">{error}</p>}
