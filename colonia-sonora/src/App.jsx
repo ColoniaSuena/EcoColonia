@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Show, SignInButton, UserButton, useSession, useUser } from '@clerk/react';
 import AdminPanel from './Components/AdminPanel.jsx';
-import AuthPanel from './Components/AuthPanel.jsx';
 import Mapacolonia from './Components/Mapacolonia.jsx';
-import { supabase } from './lib/supabase.js';
+import { createSupabaseClient } from './lib/supabase.js';
 import './App.css';
 
 const lugaresIniciales = [
@@ -38,12 +38,13 @@ const lugaresIniciales = [
     coordenadas: [-34.474, -57.846],
     detalle: 'https://www.youtube.com/watch?v=8nx-G-VMt5A',
   },
-  { id: 'El General',
-    nombre: 'El General',
+  {
+    id: 'luana',
+    nombre: 'Luana',
     categoria: 'artista',
-    tipo: 'Luana Persincula (Luana)',
+    tipo: 'Artista de Colonia',
     coordenadas: [-34.450060, -57.816829],
-    detalle: 'https://youtu.be/OfNKp-AzGaw?si=_WUbKFzp8dzvqe6E',
+    detalle: 'Luana Persincula, conocida artísticamente como Luana.',
   },
 ];
 
@@ -55,19 +56,27 @@ const filtros = [
 ];
 
 function App() {
+  const { isLoaded: sessionLoaded, session } = useSession();
+  const { isLoaded: userLoaded, user } = useUser();
+  const supabase = useMemo(
+    () => createSupabaseClient(async () => (session ? session.getToken() : null)),
+    [session],
+  );
   const [filtroActivo, setFiltroActivo] = useState('todos');
   const [lugarActivoId, setLugarActivoId] = useState(lugaresIniciales[0].id);
   const [lugares, setLugares] = useState(lugaresIniciales);
   const [canciones, setCanciones] = useState([]);
   const [recorridos, setRecorridos] = useState([]);
   const [errorCatalogo, setErrorCatalogo] = useState('');
-  const [usuario, setUsuario] = useState(null);
-  const [rol, setRol] = useState('');
-  const [errorCuenta, setErrorCuenta] = useState('');
-  const [mostrarAcceso, setMostrarAcceso] = useState(false);
+  const [perfil, setPerfil] = useState({ userId: null, sessionId: null, role: '', error: '' });
   const [mostrarAdmin, setMostrarAdmin] = useState(false);
   const [mostrarRecorridos, setMostrarRecorridos] = useState(false);
-  const [cerrandoSesion, setCerrandoSesion] = useState(false);
+  const rol = user && session && perfil.userId === user.id && perfil.sessionId === session.id
+    ? perfil.role
+    : '';
+  const errorCuenta = user && session && perfil.userId === user.id && perfil.sessionId === session.id
+    ? perfil.error
+    : '';
   const lugaresVisibles = filtroActivo === 'todos'
     ? lugares
     : lugares.filter((lugar) => lugar.categoria === filtroActivo);
@@ -75,60 +84,47 @@ function App() {
   const indiceLugarActivo = lugarActivo ? lugaresVisibles.findIndex((lugar) => lugar.id === lugarActivo.id) + 1 : 0;
 
   useEffect(() => {
-    if (!supabase) return undefined;
-
+    if (!sessionLoaded || !userLoaded || !supabase) return undefined;
     let activo = true;
 
-    async function cargarRol(usuarioActual) {
-      if (!usuarioActual) {
-        if (activo) {
-          setRol('');
-          setErrorCuenta('');
-        }
-        return;
-      }
+    if (!user) {
+      return () => {
+        activo = false;
+      };
+    }
+
+    async function cargarRol() {
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', usuarioActual.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
       if (!activo) return;
       if (error) {
-        setRol('');
-        setErrorCuenta(`No se pudo verificar el rol de la cuenta: ${error.message}`);
+        setPerfil({
+          userId: user.id,
+          sessionId: session.id,
+          role: '',
+          error: `No se pudo verificar el rol de la cuenta: ${error.message}`,
+        });
         return;
       }
-      setRol(data.role);
-      setErrorCuenta('');
+      setPerfil({
+        userId: user.id,
+        sessionId: session.id,
+        role: data?.role ?? 'user',
+        error: '',
+      });
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const usuarioActual = session?.user ?? null;
-      if (activo) setUsuario(usuarioActual);
-      if (event === 'PASSWORD_RECOVERY' && activo) setMostrarAcceso(true);
-      window.setTimeout(() => { void cargarRol(usuarioActual); }, 0);
-    });
-
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!activo) return;
-      if (error) {
-        setErrorCuenta(`No se pudo recuperar la sesión: ${error.message}`);
-        return;
-      }
-      const usuarioActual = data.session?.user ?? null;
-      setUsuario(usuarioActual);
-      void cargarRol(usuarioActual);
-    }).catch((error) => {
-      if (activo) setErrorCuenta(`No se pudo recuperar la sesión: ${error.message}`);
-    });
+    void cargarRol();
 
     return () => {
       activo = false;
-      subscription.unsubscribe();
     };
-  }, []);
+  }, [sessionLoaded, userLoaded, user, session, supabase]);
 
-  const cargarCatalogo = useCallback(async () => {
+  const cargarCatalogo = useCallback(async (lugarSeleccionadoId = null) => {
     if (!supabase) return;
     setErrorCatalogo('');
     try {
@@ -148,14 +144,19 @@ function App() {
       if (routesError) throw routesError;
       if (stopsError) throw stopsError;
 
-      setLugares(locations.map((location) => ({
+      const lugaresCargados = locations.map((location) => ({
         id: location.id,
         nombre: location.name,
         categoria: location.category,
         tipo: location.type,
         coordenadas: [location.latitude, location.longitude],
         detalle: location.details,
-      })));
+      }));
+      setLugares(lugaresCargados);
+      if (lugarSeleccionadoId && lugaresCargados.some((lugar) => lugar.id === lugarSeleccionadoId)) {
+        setFiltroActivo('todos');
+        setLugarActivoId(lugarSeleccionadoId);
+      }
       setCanciones(songs);
       setRecorridos(routes.map((route) => ({
         ...route,
@@ -167,7 +168,7 @@ function App() {
     } catch (error) {
       setErrorCatalogo(`No se pudo cargar el catálogo desde Supabase: ${error.message}`);
     }
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -193,22 +194,12 @@ function App() {
     document.getElementById('exploracion')?.scrollIntoView({ behavior: 'smooth' });
   }
 
-  async function cerrarSesion() {
-    if (!supabase) return;
-    setCerrandoSesion(true);
-    setErrorCuenta('');
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      setMostrarAdmin(false);
-    } catch (error) {
-      setErrorCuenta(`No se pudo cerrar la sesión: ${error.message}`);
-    } finally {
-      setCerrandoSesion(false);
-    }
-  }
-
-  const busquedaMusical = encodeURIComponent(`${lugarActivo?.nombre ?? ''} Colonia del Sacramento música canción`);
+  const esArtista = lugarActivo?.categoria === 'artista';
+  const busquedaMusical = encodeURIComponent(
+    esArtista
+      ? `${lugarActivo?.nombre ?? ''} ${lugarActivo?.tipo ?? ''} música`
+      : `${lugarActivo?.nombre ?? ''} Colonia del Sacramento música canción`,
+  );
   const cancionesLugar = canciones.filter((cancion) => cancion.location_id === lugarActivo?.id);
   const cancionActiva = cancionesLugar[0];
 
@@ -226,23 +217,27 @@ function App() {
           </span>
         </a>
         <div className="account-actions">
-          {usuario ? (
-            <>
-              {rol === 'admin' && <button className="login-link admin-open" type="button" onClick={() => setMostrarAdmin(true)}>Administrar</button>}
-              <span className="account-email">{usuario.email}</span>
-              <button className="login-link" type="button" disabled={cerrandoSesion} onClick={cerrarSesion}>
-                {cerrandoSesion ? 'Saliendo…' : 'Salir'}
+          <Show when="signed-out">
+            <SignInButton mode="modal">
+              <button className="login-link" type="button">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="6" r="3" /><path d="M4.5 16c.5-3 2.4-4.5 5.5-4.5s5 1.5 5.5 4.5" /></svg>
+                Ingresar
               </button>
-            </>
-          ) : (
-            <button className="login-link" type="button" onClick={() => setMostrarAcceso(true)}>
-              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="6" r="3" /><path d="M4.5 16c.5-3 2.4-4.5 5.5-4.5s5 1.5 5.5 4.5" /></svg>
-              Ingresar
-            </button>
-          )}
+            </SignInButton>
+          </Show>
+          <Show when="signed-in">
+            {rol === 'admin' && <button className="login-link admin-open" type="button" onClick={() => setMostrarAdmin(true)}>Administrar</button>}
+            <span className="account-email">{user?.primaryEmailAddress?.emailAddress}</span>
+            <UserButton />
+          </Show>
         </div>
       </header>
       {errorCuenta && <p className="backend-alert" role="alert">{errorCuenta}</p>}
+      {user && rol === 'user' && (
+        <p className="backend-alert" role="status">
+          Esta cuenta no tiene permisos de administración. Solicitá acceso al administrador del sitio.
+        </p>
+      )}
 
       <section className="hero" id="inicio" aria-labelledby="hero-title">
         <div className="hero-content">
@@ -265,6 +260,10 @@ function App() {
           <button className="quick-link quick-link-music" type="button" onClick={() => explorar('cancion')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 18V5l11-2v13M10 8l11-2" /><ellipse cx="6.5" cy="18.5" rx="3.5" ry="2.5" /><ellipse cx="17.5" cy="16.5" rx="3.5" ry="2.5" /></svg>
             Música
+          </button>
+          <button className="quick-link quick-link-artists" type="button" onClick={() => explorar('artista')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></svg>
+            Artistas
           </button>
           <button className="quick-link quick-link-routes" type="button" onClick={() => setMostrarRecorridos(true)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c4-8 10-8 14-14M5 19h5m9-14h-5" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="5" r="2" /><path d="M12 7v5m-2-3h4" /></svg>
@@ -312,13 +311,22 @@ function App() {
               lugarActivoId={lugarActivo.id}
               onSelect={setLugarActivoId}
             />
+            <div className="map-legend" aria-label="Referencias del mapa">
+              <span><i className="map-legend-dot is-song" /> Canciones</span>
+              <span><i className="map-legend-dot is-video" /> Videoclips</span>
+              <span><i className="map-legend-dot is-artist" /> Artistas</span>
+            </div>
             <div className="map-stamp" aria-hidden="true"><span>34°28′S</span><span>57°50′W</span></div>
           </div>
 
-          <aside className="place-panel" aria-live="polite" aria-label={`Música de ${lugarActivo.nombre}`}>
+          <aside
+            className="place-panel"
+            aria-live="polite"
+            aria-label={esArtista ? `Artista ${lugarActivo.nombre}` : `Música de ${lugarActivo.nombre}`}
+          >
             <div className="panel-topline">
               <span className="panel-marker"><span /></span>
-              <span className="panel-kicker">LUGAR SELECCIONADO</span>
+              <span className="panel-kicker">{esArtista ? 'ARTISTA SELECCIONADO' : 'LUGAR SELECCIONADO'}</span>
               <span className="panel-number">0{indiceLugarActivo} / 0{lugaresVisibles.length}</span>
             </div>
             <div className="place-title-wrap">
@@ -334,15 +342,19 @@ function App() {
             <div className="track-details">
               <div className="track-name-row">
                 <div>
-                  <p className="track-label">PRÓXIMA PISTA</p>
-                  <h3>{cancionActiva?.title ?? 'Una canción por descubrir'}</h3>
+                  <p className="track-label">{esArtista ? 'ARTISTA' : 'PRÓXIMA PISTA'}</p>
+                  <h3>{esArtista ? lugarActivo.nombre : cancionActiva?.title ?? 'Una canción por descubrir'}</h3>
                 </div>
-                {cancionActiva?.artist
+                {esArtista
+                  ? <span className="track-pending">{lugarActivo.tipo}</span>
+                  : cancionActiva?.artist
                   ? <span className="track-pending">{cancionActiva.artist}</span>
                   : !cancionActiva && <span className="track-pending" title="La curaduría todavía está abierta">EN CURADURÍA</span>}
               </div>
-              <p className="track-description">{cancionActiva?.description || lugarActivo.detalle}</p>
-              {!cancionActiva && <p className="curation-note">El vínculo entre la música y este lugar está pendiente de verificación.</p>}
+              <p className="track-description">
+                {esArtista ? lugarActivo.detalle || lugarActivo.tipo : cancionActiva?.description || lugarActivo.detalle}
+              </p>
+              {!esArtista && !cancionActiva && <p className="curation-note">El vínculo entre la música y este lugar está pendiente de verificación.</p>}
               <a
                 className="listen-link"
                 href={cancionActiva?.url || `https://www.youtube.com/results?search_query=${busquedaMusical}`}
@@ -350,7 +362,7 @@ function App() {
                 rel="noreferrer"
               >
                 <span className="listen-icon" aria-hidden="true">↗</span>
-                Explorar canciones
+                {esArtista ? 'Explorar música del artista' : 'Explorar canciones'}
               </a>
             </div>
             <div className="panel-coordinates">
@@ -382,14 +394,9 @@ function App() {
         <span>COLONIA SONORA <span className="footer-separator">/</span> ARCHIVO MUSICAL EN CONSTRUCCIÓN</span>
         <a href="#inicio">VOLVER AL MAPA ↑</a>
       </footer>
-      {mostrarAcceso && (
-        <AuthPanel
-          initialMode={window.location.hash.includes('type=recovery') ? 'update' : 'login'}
-          onClose={() => setMostrarAcceso(false)}
-        />
-      )}
       {mostrarAdmin && rol === 'admin' && (
         <AdminPanel
+          supabase={supabase}
           locations={lugares.map((lugar) => ({ id: lugar.id, name: lugar.nombre }))}
           onClose={() => setMostrarAdmin(false)}
           onCatalogChanged={cargarCatalogo}

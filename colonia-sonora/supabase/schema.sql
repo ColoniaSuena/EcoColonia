@@ -1,5 +1,5 @@
 create table if not exists public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
+  id text primary key,
   email text,
   role text not null default 'user' check (role in ('user', 'admin')),
   created_at timestamptz not null default now()
@@ -57,32 +57,13 @@ as $$
   select exists (
     select 1
     from public.profiles
-    where id = (select auth.uid())
+    where id = (select auth.jwt()->>'sub')
       and role = 'admin'
   );
 $$;
 
 revoke all on function public.is_admin() from public;
 grant execute on function public.is_admin() to authenticated;
-
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (id, email, role)
-  values (new.id, new.email, 'user')
-  on conflict (id) do update set email = excluded.email;
-  return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
 
 create or replace function public.replace_route_stops(
   p_route_id uuid,
@@ -119,7 +100,7 @@ alter table public.route_stops enable row level security;
 drop policy if exists "Users can read their own profile" on public.profiles;
 create policy "Users can read their own profile"
   on public.profiles for select to authenticated
-  using (id = (select auth.uid()));
+  using (id = (select auth.jwt()->>'sub'));
 
 drop policy if exists "Admins can manage locations" on public.locations;
 create policy "Admins can manage locations"
@@ -177,5 +158,5 @@ values
   ('00000000-0000-4000-8000-000000000002', 'Faro de Colonia', 'artista', 'Artista de la zona', -34.4717, -57.8515, 'Una búsqueda abierta de artistas nacidos en Colonia y sus alrededores.'),
   ('00000000-0000-4000-8000-000000000003', 'Real de San Carlos', 'videoclip', 'Videoclip filmado aquí', -34.4385, -57.8425, 'Videoclips y sesiones musicales registrados en este rincón de la ciudad.'),
   ('00000000-0000-4000-8000-000000000004', 'Rambla de Colonia', 'cancion', 'Canción sobre el lugar', -34.474, -57.846, 'https://www.youtube.com/watch?v=8nx-G-VMt5A'),
-  ('00000000-0000-4000-8000-000000000005', 'El General', 'artista', 'Luana Persincula (Luana)', -34.450060, -57.816829, 'Un artista local que ha dejado su huella en la música de Colonia.')
+  ('00000000-0000-4000-8000-000000000005', 'Luana', 'artista', 'Artista de Colonia', -34.450060, -57.816829, 'Luana Persincula, conocida artísticamente como Luana.')
 on conflict (id) do nothing;

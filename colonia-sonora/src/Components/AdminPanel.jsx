@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase.js';
+import { SelectorCoordenadas } from './Mapacolonia.jsx';
 
 const tabs = [
   { id: 'locations', label: 'Lugares' },
@@ -33,7 +33,7 @@ const blankRoute = {
   location_ids: [],
 };
 
-function AdminPanel({ locations, onClose, onCatalogChanged }) {
+function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
   const [activeTab, setActiveTab] = useState('locations');
   const [records, setRecords] = useState([]);
   const [form, setForm] = useState(blankLocation);
@@ -76,7 +76,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged }) {
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, supabase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,7 +163,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged }) {
       setEditingId(null);
       setForm(activeTab === 'locations' ? blankLocation : activeTab === 'songs' ? blankSong : blankRoute);
       await loadRecords(activeTab);
-      if (activeTab === 'locations') onCatalogChanged();
+      if (activeTab === 'locations') await onCatalogChanged(data.id);
     } catch (saveError) {
       setError(saveError.message || 'No se pudo guardar el registro.');
     } finally {
@@ -238,21 +238,41 @@ function AdminPanel({ locations, onClose, onCatalogChanged }) {
             ))}
           </div>
           <form className="admin-form" onSubmit={saveRecord}>
-            <h3>{editingId ? 'Editar' : 'Nuevo'} {selectedTab.label.slice(0, -1).toLowerCase()}</h3>
+            <h3>
+              {editingId ? 'Editar' : 'Nuevo'}{' '}
+              {activeTab === 'locations'
+                ? form.category === 'artista' ? 'artista' : 'punto del mapa'
+                : activeTab === 'songs' ? 'canción' : 'recorrido'}
+            </h3>
             {activeTab === 'locations' && (
               <>
-                <label htmlFor="location-name">Nombre</label>
+                <label htmlFor="location-name">{form.category === 'artista' ? 'Nombre del artista' : 'Nombre del punto'}</label>
                 <input id="location-name" required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
                 <label htmlFor="location-category">Categoría</label>
                 <select id="location-category" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>
                   <option value="cancion">Canción</option><option value="videoclip">Videoclip</option><option value="artista">Artista</option>
                 </select>
-                <label htmlFor="location-type">Tipo</label>
-                <input id="location-type" required value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })} />
+                <label htmlFor="location-type">{form.category === 'artista' ? 'Referencia' : 'Tipo de punto'}</label>
+                <input
+                  id="location-type"
+                  required
+                  placeholder={form.category === 'artista' ? 'Ej.: Artista de Colonia' : 'Ej.: Canción sobre el lugar'}
+                  value={form.type}
+                  onChange={(event) => setForm({ ...form, type: event.target.value })}
+                />
                 <div className="admin-coordinate-fields">
                   <div><label htmlFor="location-latitude">Latitud</label><input id="location-latitude" type="number" step="any" min="-90" max="90" required value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} /></div>
                   <div><label htmlFor="location-longitude">Longitud</label><input id="location-longitude" type="number" step="any" min="-180" max="180" required value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} /></div>
                 </div>
+                <p className="location-picker-hint">Tocá el mapa para fijar el punto; también podés escribir las coordenadas.</p>
+                <SelectorCoordenadas
+                  coordenadas={[form.latitude, form.longitude]}
+                  onSelect={([latitude, longitude]) => setForm({
+                    ...form,
+                    latitude: latitude.toFixed(6),
+                    longitude: longitude.toFixed(6),
+                  })}
+                />
                 <label htmlFor="location-details">Descripción</label>
                 <textarea id="location-details" rows="3" value={form.details} onChange={(event) => setForm({ ...form, details: event.target.value })} />
               </>

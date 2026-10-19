@@ -530,6 +530,61 @@ a:focus-visible {
   pointer-events: none;
 }
 
+.map-legend {
+  position: absolute;
+  z-index: 500;
+  bottom: 12px;
+  left: 12px;
+  display: grid;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 1px solid #173f4540;
+  background: #f4f2e8e8;
+  color: var(--ink);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.map-legend span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.map-legend-dot {
+  width: 9px;
+  height: 9px;
+  border: 1px solid #f6f3e8;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #173f45;
+}
+
+.map-legend-dot.is-song {
+  background: #173f45;
+}
+
+.map-legend-dot.is-video {
+  background: #d39c38;
+}
+
+.map-legend-dot.is-artist {
+  background: #d6533e;
+}
+
+.location-picker-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.location-picker-map {
+  width: 100%;
+  height: 180px;
+  border: 1px solid var(--line);
+  background: #dce3d4;
+}
+
 .place-panel {
   min-height: 560px;
   display: flex;
@@ -1031,8 +1086,9 @@ a:focus-visible {
   height: 48px;
   border-radius: 0;
   background: transparent;
+  background-image: url('/Logo.png');
   fill: none;
-  stroke: #183b55;
+  stroke: #551818;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.5;
@@ -1168,7 +1224,7 @@ a:focus-visible {
 
 .quick-links {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1210,6 +1266,11 @@ a:focus-visible {
 .quick-link-music {
   border-color: #c5b18e;
   background: #eee5d4;
+}
+
+.quick-link-artists {
+  border-color: #d5a39a;
+  background: #f5e4df;
 }
 
 .quick-link-routes {
@@ -1285,6 +1346,7 @@ a:focus-visible {
   }
 
   .quick-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
   }
 

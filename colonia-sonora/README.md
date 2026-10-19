@@ -19,38 +19,28 @@ npm run build
 
 Vite crea el sitio listo para publicar en `dist/`.
 
-## Usuarios, Supabase y administración
+## Acceso de administradores
 
-La aplicación usa Supabase Auth para el registro público por correo y contraseña y Supabase Database para lugares, canciones y recorridos. Las políticas de Row Level Security permiten leer contenido publicado sin iniciar sesión; solamente las cuentas con rol `admin` pueden crear, editar o eliminar contenido. Las cuentas nuevas reciben siempre el rol `user`.
+Clerk gestiona el inicio de sesión y Supabase conserva la base de datos. No hay registro público en la página: las cuentas se crean o invitan desde Clerk, y Supabase RLS autoriza cambios de contenido solo a los perfiles marcados `admin`.
 
-### Crear y configurar el proyecto
+1. En el [panel de Clerk](https://dashboard.clerk.com/), abre la aplicación, desactiva el registro público en las opciones de registro y copia la **Publishable key** (`pk_...`).
+2. En Clerk, abre **Supabase integration setup**, activa la integración y copia el dominio de Clerk.
+3. En Supabase, abre **Authentication > Third-Party Auth**, agrega Clerk y pega el dominio que copiaste. Sigue el asistente de Clerk para que las sesiones incluyan el rol `authenticated`.
+4. Si la base ya existe con perfiles UUID de Supabase Auth, ejecuta una sola vez [`supabase/clerk-migration.sql`](./supabase/clerk-migration.sql) en el SQL Editor. Conserva las tablas de contenido, pero quita el rol admin de las cuentas antiguas; no lo ejecutes de nuevo. Para una base nueva, ejecuta [`supabase/schema.sql`](./supabase/schema.sql).
+5. En Clerk, crea o invita la cuenta del administrador. Copia su **User ID** (`user_...`) y en el SQL Editor de Supabase asígnale el rol:
 
-1. Creá un proyecto en [Supabase](https://supabase.com/dashboard) y confirmá que el correo electrónico esté habilitado como método de autenticación.
-2. En el SQL Editor del proyecto, ejecutá el contenido completo de [`supabase/schema.sql`](./supabase/schema.sql). Crea las tablas, las políticas de acceso, el registro de perfiles y los lugares iniciales del mapa.
-3. Copiá `.env.example` como `.env.local` y completá las credenciales del proyecto, disponibles en **Project Settings** > **API**:
-
-   ```dotenv
-   VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-   VITE_SUPABASE_ANON_KEY=tu-clave-publicable
+   ```sql
+   insert into public.profiles (id, email, role)
+   values ('user_ID_DE_CLERK', 'admin@ejemplo.com', 'admin')
+   on conflict (id) do update
+   set email = excluded.email, role = 'admin';
    ```
 
-   Usá la URL base del proyecto (sin `/rest/v1`) y la clave pública/publishable, diseñada para el navegador y protegida por las políticas RLS. **No uses ni publiques la clave `service_role` o una clave secreta.**
-4. En **Authentication** > **Sign In / Providers** > **Email**, habilitá la confirmación de correo para que cada cuenta nueva tenga que validar su dirección antes de ingresar. Para que los mensajes de confirmación lleguen a cualquier usuario, configurá un proveedor SMTP propio en **Authentication** > **SMTP Settings**; el envío predeterminado de Supabase tiene restricciones de destinatarios y frecuencia.
-5. En **Authentication** > **URL Configuration**, configurá `https://eco-colonia.vercel.app` como **Site URL** y agregá `http://localhost:5173` y `https://eco-colonia.vercel.app` a **Redirect URLs**. El registro envía el enlace de validación a la dirección desde la que se creó la cuenta.
-6. Reiniciá `npm run dev` después de cambiar las variables de entorno.
-7. En Vercel, abrí **Project Settings** > **Environment Variables** y agregá `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` para **Production**, **Preview** y **Development** según corresponda. Usá la misma URL base (sin `/rest/v1`). Después de guardarlas, volvé a desplegar el proyecto.
+6. En `.env.local` y **Vercel > Project Settings > Environment Variables**, configura `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL` (URL base, sin `/rest/v1`) y `VITE_SUPABASE_ANON_KEY`. Elimina variables de Clerk que ya no uses y vuelve a desplegar.
 
-### Promover la primera cuenta administradora
+Las claves publicables (`pk_...` y Supabase publishable/anon) se usan en el navegador. Nunca pongas claves secretas (`sk_...` o `service_role`) en variables `VITE_`.
 
-Registrá la cuenta desde el sitio y confirmá el correo. Luego, desde el SQL Editor de Supabase, ejecutá el siguiente comando con el correo exacto de esa cuenta:
-
-```sql
-update public.profiles
-set role = 'admin'
-where email = 'admin@ejemplo.com';
-```
-
-La aplicación consulta ese rol en el servidor protegido por RLS y muestra **Administrar** solamente a administradores. El panel permite administrar lugares y sus coordenadas, canciones y enlaces, y recorridos con sus paradas. No existe un registro público de cuentas administrador; los roles se asignan desde el SQL Editor.
+Para producción, Clerk requiere una instancia de producción y un dominio propio con acceso a DNS. Con `eco-colonia.vercel.app` puedes probar la integración, pero no completar la configuración recomendada de producción de Clerk.
 
 ## Publicar en Vercel
 
