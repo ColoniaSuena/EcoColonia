@@ -211,10 +211,7 @@ function App() {
     <main className="sonora-app">
       <header className="site-header">
         <a className="brand" href="#inicio" aria-label="Colonia Sonora, inicio">
-          <svg className="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
-            <path d="M7 42h34M10 40V20l14-12 14 12v20M16 40V25h16v15M21 40V29h6v11M7 20h34M19 16h10M23 8V4h2v4" />
-            <path d="M5 42V18l19-15 19 15v24" />
-          </svg>
+          <img className="brand-mark" src="/Logo.png" alt="" />
           <span className="brand-lockup">
             <span className="brand-name">ECOS<br />COLONIA</span>
             <span className="brand-tagline">A TRAVÉS DE LA MÚSICA</span>

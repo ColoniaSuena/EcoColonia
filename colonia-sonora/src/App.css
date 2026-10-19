@@ -1084,14 +1084,9 @@ a:focus-visible {
 .brand-mark {
   width: 44px;
   height: 48px;
+  display: block;
   border-radius: 0;
-  background: transparent;
-  background-image: url('/Logo.png');
-  fill: none;
-  stroke: #551818;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.5;
+  object-fit: contain;
 }
 
 .brand-lockup {
