@@ -125,8 +125,11 @@ function App() {
   }, [sessionLoaded, userLoaded, user, session, supabase]);
 
   const cargarCatalogo = useCallback(async (lugarSeleccionadoId = null) => {
-    if (!supabase) return;
     setErrorCatalogo('');
+    if (!supabase) {
+      setErrorCatalogo('No se pudo conectar con Supabase. Revisá las variables de entorno.');
+      return;
+    }
     try {
       const [
         { data: locations, error: locationsError },
@@ -134,9 +137,9 @@ function App() {
         { data: routes, error: routesError },
         { data: stops, error: stopsError },
       ] = await Promise.all([
-        supabase.from('locations').select('*').order('name'),
-        supabase.from('songs').select('*').order('title'),
-        supabase.from('routes').select('*').order('name'),
+        supabase.from('locations').select('*').eq('is_active', true).order('name'),
+        supabase.from('songs').select('*').eq('is_active', true).order('title'),
+        supabase.from('routes').select('*').eq('is_active', true).order('name'),
         supabase.from('route_stops').select('route_id, location_id, position').order('position'),
       ]);
       if (locationsError) throw locationsError;
@@ -166,7 +169,8 @@ function App() {
           .map((stop) => stop.location_id),
       })));
     } catch (error) {
-      setErrorCatalogo(`No se pudo cargar el catálogo desde Supabase: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      setErrorCatalogo(`No se pudo cargar el catálogo desde Supabase: ${message}`);
     }
   }, [supabase]);
 
