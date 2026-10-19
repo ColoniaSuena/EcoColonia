@@ -163,7 +163,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
       setEditingId(null);
       setForm(activeTab === 'locations' ? blankLocation : activeTab === 'songs' ? blankSong : blankRoute);
       await loadRecords(activeTab);
-      if (activeTab === 'locations') await onCatalogChanged(data.id);
+      await onCatalogChanged(activeTab === 'locations' ? data.id : null);
     } catch (saveError) {
       setError(saveError.message || 'No se pudo guardar el registro.');
     } finally {
@@ -184,7 +184,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
       }
       setNotice('Se eliminó el registro.');
       await loadRecords(activeTab);
-      if (activeTab === 'locations') onCatalogChanged();
+      await onCatalogChanged();
     } catch (deleteError) {
       setError(deleteError.message || 'No se pudo eliminar el registro.');
     }
@@ -284,10 +284,10 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
                 <label htmlFor="song-artist">Artista</label>
                 <input id="song-artist" value={form.artist} onChange={(event) => setForm({ ...form, artist: event.target.value })} />
                 <label htmlFor="song-url">Enlace</label>
-                <input id="song-url" type="url" placeholder="https://" value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} />
+                <input id="song-url" type="url" placeholder="https://" required value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} />
                 <label htmlFor="song-location">Lugar relacionado</label>
-                <select id="song-location" value={form.location_id} onChange={(event) => setForm({ ...form, location_id: event.target.value })}>
-                  <option value="">Sin lugar asociado</option>
+                <select id="song-location" required value={form.location_id} onChange={(event) => setForm({ ...form, location_id: event.target.value })}>
+                  <option value="">Elegí un lugar</option>
                   {locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
                 </select>
                 <label htmlFor="song-description">Descripción</label>

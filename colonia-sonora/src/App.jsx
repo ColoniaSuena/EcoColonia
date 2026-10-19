@@ -366,7 +366,9 @@ function App() {
                 rel="noreferrer"
               >
                 <span className="listen-icon" aria-hidden="true">↗</span>
-                {esArtista ? 'Explorar música del artista' : 'Explorar canciones'}
+                {cancionActiva?.url
+                  ? 'Escuchar canción'
+                  : esArtista ? 'Explorar música del artista' : 'Explorar canciones'}
               </a>
             </div>
             <div className="panel-coordinates">
