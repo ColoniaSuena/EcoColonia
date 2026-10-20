@@ -229,7 +229,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
       <section className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-title">
         <header className="admin-header">
           <div>
-            <p className="eyebrow">ECOS COLONIA</p>
+            <p className="eyebrow"> Ecos de Colonia </p>
             <h2 id="admin-title">Administración</h2>
           </div>
           <button className="account-close" type="button" aria-label="Cerrar" onClick={onClose}>×</button>

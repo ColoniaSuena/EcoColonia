@@ -5,7 +5,7 @@ function RoutesModal({ recorridos, lugares, onClose }) {
     }}>
       <section className="account-dialog routes-dialog" role="dialog" aria-modal="true" aria-labelledby="routes-title">
         <button className="account-close" type="button" aria-label="Cerrar" onClick={onClose}>×</button>
-        <p className="eyebrow">ECOS COLONIA</p>
+        <p className="eyebrow">Ecos de Colonia</p>
         <h2 id="routes-title">Recorridos musicales</h2>
         {recorridos.length === 0
           ? <p className="account-intro">Todavía no hay recorridos publicados.</p>
