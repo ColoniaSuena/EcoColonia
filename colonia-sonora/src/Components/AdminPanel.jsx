@@ -123,7 +123,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
         name: record.name,
         description: record.description ?? '',
         is_active: record.is_active,
-        location_ids: record.location_ids,
+        location_ids: Array.isArray(record.location_ids) ? record.location_ids : [],
       });
     }
     setError('');
@@ -133,6 +133,36 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
   async function saveRecord(event) {
     event.preventDefault();
     if (!supabase) return;
+    if (activeTab === 'locations') {
+      const latitude = Number(form.latitude);
+      const longitude = Number(form.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
+        || latitude < -90 || latitude > 90
+        || longitude < -180 || longitude > 180) {
+        setError('Ingresá una latitud y longitud válidas para el lugar.');
+        return;
+      }
+    }
+    if (activeTab === 'songs') {
+      if (!form.location_id) {
+        setError('Elegí el lugar al que pertenece esta canción.');
+        return;
+      }
+      if (!form.url || !/^https?:\/\//i.test(form.url.trim())) {
+        setError('Ingresá un enlace válido para la canción con http o https.');
+        return;
+      }
+    }
+    if (activeTab === 'routes') {
+      if (!form.name.trim()) {
+        setError('El nombre del recorrido es obligatorio.');
+        return;
+      }
+      if (form.location_ids.length === 0) {
+        setError('Seleccioná al menos una parada para el recorrido.');
+        return;
+      }
+    }
     setSaving(true);
     setError('');
     setNotice('');
@@ -231,7 +261,11 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
               <article className={`admin-record${editingId === record.id ? ' is-selected' : ''}`} key={record.id}>
                 <button className="admin-record-name" type="button" onClick={() => editRecord(record)}>
                   <strong>{record.name || record.title}</strong>
-                  <span>{record.category ? `${record.category} · ` : ''}{record.is_active ? 'Publicado' : 'Oculto'}</span>
+                  <span>
+                    {activeTab === 'locations' && record.category ? `${record.category} · ` : ''}
+                    {activeTab === 'songs' && record.location_id ? `${locations.find((location) => location.id === record.location_id)?.name ?? 'Lugar'} · ` : ''}
+                    {record.is_active ? 'Publicado' : 'Oculto'}
+                  </span>
                 </button>
                 <button className="admin-delete" type="button" aria-label={`Eliminar ${record.name || record.title}`} onClick={() => deleteRecord(record)}>×</button>
               </article>
@@ -329,7 +363,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
             {notice && <p className="account-message" role="status">{notice}</p>}
             <div className="admin-form-actions">
               {editingId && <button className="admin-cancel" type="button" onClick={() => { setEditingId(null); setForm(activeTab === 'locations' ? blankLocation : activeTab === 'songs' ? blankSong : blankRoute); }}>Cancelar</button>}
-              <button className="account-submit" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
+              <button className="account-submit" type="submit" disabled={saving}>{saving ? 'Guardando…' : editingId ? 'Actualizar' : 'Guardar'}</button>
             </div>
           </form>
         </div>

@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Show, SignInButton, UserButton, useSession, useUser } from '@clerk/react';
+import { useMemo, useState } from 'react';
+import { useSession, useUser } from '@clerk/react';
 import AdminPanel from './Components/AdminPanel.jsx';
-import Mapacolonia from './Components/Mapacolonia.jsx';
+import Header from './Components/Header.jsx';
+import Hero from './Components/Hero.jsx';
+import MapPanel from './Components/MapPanel.jsx';
+import PlaceDetails from './Components/PlaceDetails.jsx';
+import RoutesModal from './Components/RoutesModal.jsx';
 import { createSupabaseClient } from './lib/supabase.js';
+import useCatalog from './hooks/useCatalog.js';
+import useUserRole from './hooks/useUserRole.js';
 import './App.css';
 
 const lugaresIniciales = [
@@ -64,126 +70,18 @@ function App() {
   );
   const [filtroActivo, setFiltroActivo] = useState('todos');
   const [lugarActivoId, setLugarActivoId] = useState(lugaresIniciales[0].id);
-  const [lugares, setLugares] = useState(lugaresIniciales);
-  const [canciones, setCanciones] = useState([]);
-  const [recorridos, setRecorridos] = useState([]);
-  const [errorCatalogo, setErrorCatalogo] = useState('');
-  const [perfil, setPerfil] = useState({ userId: null, sessionId: null, role: '', error: '' });
   const [mostrarAdmin, setMostrarAdmin] = useState(false);
   const [mostrarRecorridos, setMostrarRecorridos] = useState(false);
-  const rol = user && session && perfil.userId === user.id && perfil.sessionId === session.id
-    ? perfil.role
-    : '';
-  const errorCuenta = user && session && perfil.userId === user.id && perfil.sessionId === session.id
-    ? perfil.error
-    : '';
+  const { rol, errorCuenta } = useUserRole({ sessionLoaded, userLoaded, user, session, supabase });
+  const { lugares, canciones, recorridos, errorCatalogo, cargarCatalogo } = useCatalog({
+    supabase,
+    initialPlaces: lugaresIniciales,
+  });
   const lugaresVisibles = filtroActivo === 'todos'
     ? lugares
     : lugares.filter((lugar) => lugar.categoria === filtroActivo);
   const lugarActivo = lugaresVisibles.find((lugar) => lugar.id === lugarActivoId) ?? lugaresVisibles[0] ?? null;
   const indiceLugarActivo = lugarActivo ? lugaresVisibles.findIndex((lugar) => lugar.id === lugarActivo.id) + 1 : 0;
-
-  useEffect(() => {
-    if (!sessionLoaded || !userLoaded || !supabase) return undefined;
-    let activo = true;
-
-    if (!user) {
-      return () => {
-        activo = false;
-      };
-    }
-
-    async function cargarRol() {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-      if (!activo) return;
-      if (error) {
-        setPerfil({
-          userId: user.id,
-          sessionId: session.id,
-          role: '',
-          error: `No se pudo verificar el rol de la cuenta: ${error.message}`,
-        });
-        return;
-      }
-      setPerfil({
-        userId: user.id,
-        sessionId: session.id,
-        role: data?.role ?? 'user',
-        error: '',
-      });
-    }
-
-    void cargarRol();
-
-    return () => {
-      activo = false;
-    };
-  }, [sessionLoaded, userLoaded, user, session, supabase]);
-
-  const cargarCatalogo = useCallback(async (lugarSeleccionadoId = null) => {
-    setErrorCatalogo('');
-    if (!supabase) {
-      setErrorCatalogo('No se pudo conectar con Supabase. Revisá las variables de entorno.');
-      return;
-    }
-    try {
-      const [
-        { data: locations, error: locationsError },
-        { data: songs, error: songsError },
-        { data: routes, error: routesError },
-        { data: stops, error: stopsError },
-      ] = await Promise.all([
-        supabase.from('locations').select('*').eq('is_active', true).order('name'),
-        supabase.from('songs').select('*').eq('is_active', true).order('title'),
-        supabase.from('routes').select('*').eq('is_active', true).order('name'),
-        supabase.from('route_stops').select('route_id, location_id, position').order('position'),
-      ]);
-      if (locationsError) throw locationsError;
-      if (songsError) throw songsError;
-      if (routesError) throw routesError;
-      if (stopsError) throw stopsError;
-
-      const lugaresCargados = locations.map((location) => ({
-        id: location.id,
-        nombre: location.name,
-        categoria: location.category,
-        tipo: location.type,
-        coordenadas: [location.latitude, location.longitude],
-        detalle: location.details,
-      }));
-      setLugares(lugaresCargados);
-      if (lugarSeleccionadoId && lugaresCargados.some((lugar) => lugar.id === lugarSeleccionadoId)) {
-        setFiltroActivo('todos');
-        setLugarActivoId(lugarSeleccionadoId);
-      }
-      setCanciones(songs);
-      setRecorridos(routes.map((route) => ({
-        ...route,
-        location_ids: stops
-          .filter((stop) => stop.route_id === route.id)
-          .sort((a, b) => a.position - b.position)
-          .map((stop) => stop.location_id),
-      })));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setErrorCatalogo(`No se pudo cargar el catálogo desde Supabase: ${message}`);
-    }
-  }, [supabase]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      if (!cancelled) void cargarCatalogo();
-    }, 0);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [cargarCatalogo]);
 
   function cambiarFiltro(filtroId) {
     setFiltroActivo(filtroId);
@@ -209,30 +107,7 @@ function App() {
 
   return (
     <main className="sonora-app">
-      <header className="site-header">
-        <a className="brand" href="#inicio" aria-label="Colonia Sonora, inicio">
-          <img className="brand-mark" src="/Logo.png" alt="" />
-          <span className="brand-lockup">
-            <span className="brand-name">ECOS<br />COLONIA</span>
-            <span className="brand-tagline">A TRAVÉS DE LA MÚSICA</span>
-          </span>
-        </a>
-        <div className="account-actions">
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <button className="login-link" type="button">
-                <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="6" r="3" /><path d="M4.5 16c.5-3 2.4-4.5 5.5-4.5s5 1.5 5.5 4.5" /></svg>
-                Ingresar
-              </button>
-            </SignInButton>
-          </Show>
-          <Show when="signed-in">
-            {rol === 'admin' && <button className="login-link admin-open" type="button" onClick={() => setMostrarAdmin(true)}>Administrar</button>}
-            <span className="account-email">{user?.primaryEmailAddress?.emailAddress}</span>
-            <UserButton />
-          </Show>
-        </div>
-      </header>
+      <Header user={user} rol={rol} onOpenAdmin={() => setMostrarAdmin(true)} />
       {errorCuenta && <p className="backend-alert" role="alert">{errorCuenta}</p>}
       {user && rol === 'user' && (
         <p className="backend-alert" role="status">
@@ -240,16 +115,7 @@ function App() {
         </p>
       )}
 
-      <section className="hero" id="inicio" aria-labelledby="hero-title">
-        <div className="hero-content">
-          <h1 id="hero-title">DESCUBRÍ COLONIA</h1>
-          <p>A TRAVÉS DE LA MÚSICA</p>
-          <button className="hero-cta" type="button" onClick={() => explorar()}>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18s6-5.7 6-10a6 6 0 1 0-12 0c0 4.3 6 10 6 10Z" /><circle cx="10" cy="8" r="2" /></svg>
-            EXPLORAR MAPA
-          </button>
-        </div>
-      </section>
+      <Hero onExplore={explorar} />
 
       <section className="quick-explore" aria-labelledby="quick-explore-title">
         <h2 id="quick-explore-title">¿Qué querés descubrir?</h2>
@@ -306,73 +172,21 @@ function App() {
         </div>
 
         {lugarActivo ? <div className="discovery-layout">
-          <div className="map-frame" aria-label="Mapa interactivo de Colonia del Sacramento">
-            <Mapacolonia
-              lugares={lugaresVisibles}
-              lugarActivoId={lugarActivo.id}
-              onSelect={setLugarActivoId}
-            />
-            <div className="map-legend" aria-label="Referencias del mapa">
-              <span><i className="map-legend-dot is-song" /> Canciones</span>
-              <span><i className="map-legend-dot is-video" /> Videoclips</span>
-              <span><i className="map-legend-dot is-artist" /> Artistas</span>
-            </div>
-            <div className="map-stamp" aria-hidden="true"><span>34°28′S</span><span>57°50′W</span></div>
-          </div>
+          <MapPanel
+            lugaresVisibles={lugaresVisibles}
+            lugarActivoId={lugarActivo.id}
+            onSelect={setLugarActivoId}
+          />
 
-          <aside
-            className="place-panel"
-            aria-live="polite"
-            aria-label={esArtista ? `Artista ${lugarActivo.nombre}` : `Música de ${lugarActivo.nombre}`}
-          >
-            <div className="panel-topline">
-              <span className="panel-marker"><span /></span>
-              <span className="panel-kicker">{esArtista ? 'ARTISTA SELECCIONADO' : 'LUGAR SELECCIONADO'}</span>
-              <span className="panel-number">0{indiceLugarActivo} / 0{lugaresVisibles.length}</span>
-            </div>
-            <div className="place-title-wrap">
-              <p className="place-type">{lugarActivo.tipo}</p>
-              <h2 className="place-title">{lugarActivo.nombre}</h2>
-            </div>
-            <div className="record-sleeve" aria-hidden="true">
-              <div className="record-sun" />
-              <div className="record-disc"><span className="record-center" /></div>
-              <span className="sleeve-caption">COLONIA<br />SONORA</span>
-              <span className="sleeve-side">ARCHIVO DE LUGAR · N.º 00{lugares.indexOf(lugarActivo) + 1}</span>
-            </div>
-            <div className="track-details">
-              <div className="track-name-row">
-                <div>
-                  <p className="track-label">{esArtista ? 'ARTISTA' : 'PRÓXIMA PISTA'}</p>
-                  <h3>{esArtista ? lugarActivo.nombre : cancionActiva?.title ?? 'Una canción por descubrir'}</h3>
-                </div>
-                {esArtista
-                  ? <span className="track-pending">{lugarActivo.tipo}</span>
-                  : cancionActiva?.artist
-                  ? <span className="track-pending">{cancionActiva.artist}</span>
-                  : !cancionActiva && <span className="track-pending" title="La curaduría todavía está abierta">EN CURADURÍA</span>}
-              </div>
-              <p className="track-description">
-                {esArtista ? lugarActivo.detalle || lugarActivo.tipo : cancionActiva?.description || lugarActivo.detalle}
-              </p>
-              {!esArtista && !cancionActiva && <p className="curation-note">El vínculo entre la música y este lugar está pendiente de verificación.</p>}
-              <a
-                className="listen-link"
-                href={cancionActiva?.url || `https://www.youtube.com/results?search_query=${busquedaMusical}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <span className="listen-icon" aria-hidden="true">↗</span>
-                {cancionActiva?.url
-                  ? 'Escuchar canción'
-                  : esArtista ? 'Explorar música del artista' : 'Explorar canciones'}
-              </a>
-            </div>
-            <div className="panel-coordinates">
-              <span>COLONIA DEL SACRAMENTO</span>
-              <span>{Math.abs(lugarActivo.coordenadas[0]).toFixed(4)}° S</span>
-            </div>
-          </aside>
+          <PlaceDetails
+            lugarActivo={lugarActivo}
+            indiceLugarActivo={indiceLugarActivo}
+            lugaresVisibles={lugaresVisibles}
+            lugares={lugares}
+            esArtista={esArtista}
+            cancionActiva={cancionActiva}
+            busquedaMusical={busquedaMusical}
+          />
         </div> : <p className="catalog-empty" role="status">Todavía no hay lugares publicados. Volvé pronto para descubrir el catálogo.</p>}
 
         {lugarActivo && <nav className="place-list" aria-label="Lugares destacados">
@@ -406,27 +220,11 @@ function App() {
         />
       )}
       {mostrarRecorridos && (
-        <div className="account-overlay" role="presentation" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setMostrarRecorridos(false);
-        }}>
-          <section className="account-dialog routes-dialog" role="dialog" aria-modal="true" aria-labelledby="routes-title">
-            <button className="account-close" type="button" aria-label="Cerrar" onClick={() => setMostrarRecorridos(false)}>×</button>
-            <p className="eyebrow">ECOS COLONIA</p>
-            <h2 id="routes-title">Recorridos musicales</h2>
-            {recorridos.length === 0
-              ? <p className="account-intro">Todavía no hay recorridos publicados.</p>
-              : recorridos.map((route) => (
-                <article className="public-route" key={route.id}>
-                  <h3>{route.name}</h3>
-                  <p>{route.description}</p>
-                  <ol>{route.location_ids.map((locationId) => {
-                    const location = lugares.find((place) => place.id === locationId);
-                    return location ? <li key={locationId}>{location.nombre}</li> : null;
-                  })}</ol>
-                </article>
-              ))}
-          </section>
-        </div>
+        <RoutesModal
+          recorridos={recorridos}
+          lugares={lugares}
+          onClose={() => setMostrarRecorridos(false)}
+        />
       )}
     </main>
   );
