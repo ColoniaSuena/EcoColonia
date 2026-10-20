@@ -1,3 +1,27 @@
+function getYouTubeEmbedUrl(value) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, '');
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+
+    let videoId = null;
+    if (hostname === 'youtu.be') {
+      videoId = url.pathname.split('/').filter(Boolean)[0];
+    } else if (['youtube.com', 'm.youtube.com', 'youtube-nocookie.com'].includes(hostname)) {
+      videoId = url.searchParams.get('v')
+        || url.pathname.match(/^\/(?:embed|shorts|live)\/([^/?]+)/)?.[1];
+    }
+
+    return videoId && /^[\w-]{11}$/.test(videoId)
+      ? `https://www.youtube-nocookie.com/embed/${videoId}`
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function PlaceDetails({
   lugarActivo,
   indiceLugarActivo,
@@ -7,6 +31,9 @@ function PlaceDetails({
   cancionActiva,
   busquedaMusical,
 }) {
+  const videoUrl = getYouTubeEmbedUrl(cancionActiva?.url)
+    ?? getYouTubeEmbedUrl(lugarActivo.detalle);
+
   return (
     <aside
       className="place-panel"
@@ -41,20 +68,35 @@ function PlaceDetails({
             : !cancionActiva && <span className="track-pending" title="La curaduría todavía está abierta">EN CURADURÍA</span>}
         </div>
         <p className="track-description">
-          {esArtista ? lugarActivo.detalle || lugarActivo.tipo : cancionActiva?.description || lugarActivo.detalle}
+          {esArtista
+            ? lugarActivo.detalle || lugarActivo.tipo
+            : cancionActiva?.description || (videoUrl ? '' : lugarActivo.detalle)}
         </p>
-        {!esArtista && !cancionActiva && <p className="curation-note">El vínculo entre la música y este lugar está pendiente de verificación.</p>}
-        <a
-          className="listen-link"
-          href={cancionActiva?.url || `https://www.youtube.com/results?search_query=${busquedaMusical}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <span className="listen-icon" aria-hidden="true">↗</span>
-          {cancionActiva?.url
-            ? 'Escuchar canción'
-            : esArtista ? 'Explorar música del artista' : 'Explorar canciones'}
-        </a>
+        {videoUrl && (
+          <div className="video-player">
+            <iframe
+              src={videoUrl}
+              title={`Video de ${lugarActivo.nombre}`}
+              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          </div>
+        )}
+        {!esArtista && !cancionActiva && !videoUrl && <p className="curation-note">El vínculo entre la música y este lugar está pendiente de verificación.</p>}
+        {!videoUrl && (
+          <a
+            className="listen-link"
+            href={cancionActiva?.url || `https://www.youtube.com/results?search_query=${busquedaMusical}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span className="listen-icon" aria-hidden="true">↗</span>
+            {cancionActiva?.url
+              ? 'Escuchar canción'
+              : esArtista ? 'Explorar música del artista' : 'Explorar canciones'}
+          </a>
+        )}
       </div>
       <div className="panel-coordinates">
         <span>COLONIA DEL SACRAMENTO</span>
