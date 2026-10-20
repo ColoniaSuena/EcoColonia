@@ -1,3 +1,28 @@
+function getYouTubeEmbedUrl(url) {
+  if (!url) return null;
+
+  try {
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
+    let videoId = '';
+
+    if (hostname === 'youtu.be') {
+      videoId = parsedUrl.pathname.slice(1).split('/')[0];
+    } else if (hostname === 'youtube.com' || hostname === 'm.youtube.com') {
+      const [, videoType, pathVideoId] = parsedUrl.pathname.split('/');
+      videoId = parsedUrl.pathname === '/watch'
+        ? parsedUrl.searchParams.get('v') ?? ''
+        : ['embed', 'shorts', 'live'].includes(videoType) ? pathVideoId ?? '' : '';
+    }
+
+    return /^[\w-]{11}$/.test(videoId)
+      ? `https://www.youtube-nocookie.com/embed/${videoId}`
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function PlaceDetails({
   lugarActivo,
   indiceLugarActivo,
@@ -7,6 +32,8 @@ function PlaceDetails({
   cancionActiva,
   busquedaMusical,
 }) {
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(cancionActiva?.url);
+
   return (
     <aside
       className="place-panel"
@@ -44,6 +71,18 @@ function PlaceDetails({
           {esArtista ? lugarActivo.detalle || lugarActivo.tipo : cancionActiva?.description || lugarActivo.detalle}
         </p>
         {!esArtista && !cancionActiva && <p className="curation-note">El vínculo entre la música y este lugar está pendiente de verificación.</p>}
+        {youtubeEmbedUrl && (
+          <div className="youtube-player">
+            <iframe
+              src={youtubeEmbedUrl}
+              title={`Reproductor de YouTube: ${cancionActiva.title}`}
+              allow="encrypted-media; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
+        )}
         <a
           className="listen-link"
           href={cancionActiva?.url || `https://www.youtube.com/results?search_query=${busquedaMusical}`}
@@ -51,7 +90,9 @@ function PlaceDetails({
           rel="noreferrer"
         >
           <span className="listen-icon" aria-hidden="true">↗</span>
-          {cancionActiva?.url
+          {youtubeEmbedUrl
+            ? 'Abrir en YouTube'
+            : cancionActiva?.url
             ? 'Escuchar canción'
             : esArtista ? 'Explorar música del artista' : 'Explorar canciones'}
         </a>
