@@ -38,6 +38,7 @@ function useCatalog({ supabase, initialPlaces = [] }) {
         tipo: location.type,
         coordenadas: [location.latitude, location.longitude],
         detalle: location.details,
+        enlace: location.media_url ?? '',
       }));
 
       setLugares(lugaresCargados);

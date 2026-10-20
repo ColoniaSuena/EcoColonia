@@ -27,7 +27,8 @@ Clerk gestiona el inicio de sesión y Supabase conserva la base de datos. No hay
 2. En Clerk, abre **Supabase integration setup**, activa la integración y copia el dominio de Clerk.
 3. En Supabase, abre **Authentication > Third-Party Auth**, agrega Clerk y pega el dominio que copiaste. Sigue el asistente de Clerk para que las sesiones incluyan el rol `authenticated`.
 4. Si la base ya existe con perfiles UUID de Supabase Auth, ejecuta una sola vez [`supabase/clerk-migration.sql`](./supabase/clerk-migration.sql) en el SQL Editor. Conserva las tablas de contenido, pero quita el rol admin de las cuentas antiguas; no lo ejecutes de nuevo. Para una base nueva, ejecuta [`supabase/schema.sql`](./supabase/schema.sql).
-5. En Clerk, crea o invita la cuenta del administrador. Copia su **User ID** (`user_...`) y en el SQL Editor de Supabase asígnale el rol:
+5. Si la tabla `locations` ya existía, ejecuta [`supabase/add-location-media-url.sql`](./supabase/add-location-media-url.sql) en el SQL Editor para habilitar el enlace de video en todos los puntos.
+6. En Clerk, crea o invita la cuenta del administrador. Copia su **User ID** (`user_...`) y en el SQL Editor de Supabase asígnale el rol:
 
    ```sql
    insert into public.profiles (id, email, role)
@@ -36,7 +37,7 @@ Clerk gestiona el inicio de sesión y Supabase conserva la base de datos. No hay
    set email = excluded.email, role = 'admin';
    ```
 
-6. En `.env.local` y **Vercel > Project Settings > Environment Variables**, configura `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL` (URL base, sin `/rest/v1`) y `VITE_SUPABASE_ANON_KEY`. Elimina variables de Clerk que ya no uses y vuelve a desplegar.
+7. En `.env.local` y **Vercel > Project Settings > Environment Variables**, configura `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL` (URL base, sin `/rest/v1`) y `VITE_SUPABASE_ANON_KEY`. Elimina variables de Clerk que ya no uses y vuelve a desplegar.
 
 ### Agregar lugares y canciones
 

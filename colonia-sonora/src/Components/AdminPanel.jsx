@@ -14,6 +14,7 @@ const blankLocation = {
   latitude: '',
   longitude: '',
   details: '',
+  media_url: '',
   is_active: true,
 };
 
@@ -107,6 +108,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
         latitude: record.latitude,
         longitude: record.longitude,
         details: record.details ?? '',
+        media_url: record.media_url ?? '',
         is_active: record.is_active,
       });
     } else if (activeTab === 'songs') {
@@ -140,6 +142,10 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
         || latitude < -90 || latitude > 90
         || longitude < -180 || longitude > 180) {
         setError('Ingresá una latitud y longitud válidas para el lugar.');
+        return;
+      }
+      if (form.media_url.trim() && !/^https?:\/\/\S+$/i.test(form.media_url.trim())) {
+        setError('Ingresá un enlace válido con http o https.');
         return;
       }
     }
@@ -309,6 +315,14 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
                 />
                 <label htmlFor="location-details">Descripción</label>
                 <textarea id="location-details" rows="3" value={form.details} onChange={(event) => setForm({ ...form, details: event.target.value })} />
+                <label htmlFor="location-media-url">Enlace del video (YouTube)</label>
+                <input
+                  id="location-media-url"
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={form.media_url}
+                  onChange={(event) => setForm({ ...form, media_url: event.target.value })}
+                />
               </>
             )}
             {activeTab === 'songs' && (

@@ -31,7 +31,8 @@ function PlaceDetails({
   cancionActiva,
   busquedaMusical,
 }) {
-  const videoUrl = getYouTubeEmbedUrl(cancionActiva?.url)
+  const videoUrl = getYouTubeEmbedUrl(lugarActivo.enlace)
+    ?? getYouTubeEmbedUrl(cancionActiva?.url)
     ?? getYouTubeEmbedUrl(lugarActivo.detalle);
 
   return (
