@@ -27,7 +27,8 @@ Clerk gestiona el inicio de sesión y Supabase conserva la base de datos. No hay
 2. En Clerk, abre **Supabase integration setup**, activa la integración y copia el dominio de Clerk.
 3. En Supabase, abre **Authentication > Third-Party Auth**, agrega Clerk y pega el dominio que copiaste. Sigue el asistente de Clerk para que las sesiones incluyan el rol `authenticated`.
 4. Si la base ya existe con perfiles UUID de Supabase Auth, ejecuta una sola vez [`supabase/clerk-migration.sql`](./supabase/clerk-migration.sql) en el SQL Editor. Conserva las tablas de contenido, pero quita el rol admin de las cuentas antiguas; no lo ejecutes de nuevo. Para una base nueva, ejecuta [`supabase/schema.sql`](./supabase/schema.sql).
-5. En Clerk, crea o invita la cuenta del administrador. Copia su **User ID** (`user_...`) y en el SQL Editor de Supabase asígnale el rol:
+5. Si la tabla `locations` ya existía, ejecuta [`supabase/add-location-media-url.sql`](./supabase/add-location-media-url.sql) en el SQL Editor para habilitar el enlace de video en todos los puntos.
+6. En Clerk, crea o invita la cuenta del administrador. Copia su **User ID** (`user_...`) y en el SQL Editor de Supabase asígnale el rol:
 
    ```sql
    insert into public.profiles (id, email, role)
@@ -36,7 +37,14 @@ Clerk gestiona el inicio de sesión y Supabase conserva la base de datos. No hay
    set email = excluded.email, role = 'admin';
    ```
 
-6. En `.env.local` y **Vercel > Project Settings > Environment Variables**, configura `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL` (URL base, sin `/rest/v1`) y `VITE_SUPABASE_ANON_KEY`. Elimina variables de Clerk que ya no uses y vuelve a desplegar.
+7. En `.env.local` y **Vercel > Project Settings > Environment Variables**, configura `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL` (URL base, sin `/rest/v1`) y `VITE_SUPABASE_ANON_KEY`. Elimina variables de Clerk que ya no uses y vuelve a desplegar.
+
+### Agregar lugares y canciones
+
+1. Iniciá sesión con una cuenta administradora y abrí **Administrar**.
+2. En **Lugares**, creá el punto, completá nombre y categoría, y hacé clic en su ubicación en el mapa. Las coordenadas se actualizan con ese punto; también podés ajustarlas en los campos de latitud y longitud. Guardá el lugar.
+3. En **Canciones**, completá el título, pegá el enlace directo de la canción (por ejemplo, de YouTube o Spotify) y elegí el lugar relacionado. Guardá el registro y dejalo publicado.
+4. Al seleccionar ese lugar en el mapa público, aparecerán los datos de la canción. **Escuchar canción** abre el enlace guardado en una pestaña nueva; la reproducción la controla el servicio enlazado.
 
 Las claves publicables (`pk_...` y Supabase publishable/anon) se usan en el navegador. Nunca pongas claves secretas (`sk_...` o `service_role`) en variables `VITE_`.
 

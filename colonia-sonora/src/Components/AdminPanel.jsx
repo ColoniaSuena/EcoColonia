@@ -14,6 +14,7 @@ const blankLocation = {
   latitude: '',
   longitude: '',
   details: '',
+  media_url: '',
   is_active: true,
 };
 
@@ -107,6 +108,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
         latitude: record.latitude,
         longitude: record.longitude,
         details: record.details ?? '',
+        media_url: record.media_url ?? '',
         is_active: record.is_active,
       });
     } else if (activeTab === 'songs') {
@@ -123,7 +125,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
         name: record.name,
         description: record.description ?? '',
         is_active: record.is_active,
-        location_ids: record.location_ids,
+        location_ids: Array.isArray(record.location_ids) ? record.location_ids : [],
       });
     }
     setError('');
@@ -133,6 +135,40 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
   async function saveRecord(event) {
     event.preventDefault();
     if (!supabase) return;
+    if (activeTab === 'locations') {
+      const latitude = Number(form.latitude);
+      const longitude = Number(form.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
+        || latitude < -90 || latitude > 90
+        || longitude < -180 || longitude > 180) {
+        setError('Ingresá una latitud y longitud válidas para el lugar.');
+        return;
+      }
+      if (form.media_url.trim() && !/^https?:\/\/\S+$/i.test(form.media_url.trim())) {
+        setError('Ingresá un enlace válido con http o https.');
+        return;
+      }
+    }
+    if (activeTab === 'songs') {
+      if (!form.location_id) {
+        setError('Elegí el lugar al que pertenece esta canción.');
+        return;
+      }
+      if (!form.url || !/^https?:\/\//i.test(form.url.trim())) {
+        setError('Ingresá un enlace válido para la canción con http o https.');
+        return;
+      }
+    }
+    if (activeTab === 'routes') {
+      if (!form.name.trim()) {
+        setError('El nombre del recorrido es obligatorio.');
+        return;
+      }
+      if (form.location_ids.length === 0) {
+        setError('Seleccioná al menos una parada para el recorrido.');
+        return;
+      }
+    }
     setSaving(true);
     setError('');
     setNotice('');
@@ -163,7 +199,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
       setEditingId(null);
       setForm(activeTab === 'locations' ? blankLocation : activeTab === 'songs' ? blankSong : blankRoute);
       await loadRecords(activeTab);
-      if (activeTab === 'locations') await onCatalogChanged(data.id);
+      await onCatalogChanged(activeTab === 'locations' ? data.id : null);
     } catch (saveError) {
       setError(saveError.message || 'No se pudo guardar el registro.');
     } finally {
@@ -184,7 +220,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
       }
       setNotice('Se eliminó el registro.');
       await loadRecords(activeTab);
-      if (activeTab === 'locations') onCatalogChanged();
+      await onCatalogChanged();
     } catch (deleteError) {
       setError(deleteError.message || 'No se pudo eliminar el registro.');
     }
@@ -199,7 +235,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
       <section className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-title">
         <header className="admin-header">
           <div>
-            <p className="eyebrow">ECOS COLONIA</p>
+            <p className="eyebrow"> Ecos de Colonia </p>
             <h2 id="admin-title">Administración</h2>
           </div>
           <button className="account-close" type="button" aria-label="Cerrar" onClick={onClose}>×</button>
@@ -231,7 +267,11 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
               <article className={`admin-record${editingId === record.id ? ' is-selected' : ''}`} key={record.id}>
                 <button className="admin-record-name" type="button" onClick={() => editRecord(record)}>
                   <strong>{record.name || record.title}</strong>
-                  <span>{record.category ? `${record.category} · ` : ''}{record.is_active ? 'Publicado' : 'Oculto'}</span>
+                  <span>
+                    {activeTab === 'locations' && record.category ? `${record.category} · ` : ''}
+                    {activeTab === 'songs' && record.location_id ? `${locations.find((location) => location.id === record.location_id)?.name ?? 'Lugar'} · ` : ''}
+                    {record.is_active ? 'Publicado' : 'Oculto'}
+                  </span>
                 </button>
                 <button className="admin-delete" type="button" aria-label={`Eliminar ${record.name || record.title}`} onClick={() => deleteRecord(record)}>×</button>
               </article>
@@ -275,6 +315,14 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
                 />
                 <label htmlFor="location-details">Descripción</label>
                 <textarea id="location-details" rows="3" value={form.details} onChange={(event) => setForm({ ...form, details: event.target.value })} />
+                <label htmlFor="location-media-url">Enlace del video (YouTube)</label>
+                <input
+                  id="location-media-url"
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={form.media_url}
+                  onChange={(event) => setForm({ ...form, media_url: event.target.value })}
+                />
               </>
             )}
             {activeTab === 'songs' && (
@@ -284,10 +332,10 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
                 <label htmlFor="song-artist">Artista</label>
                 <input id="song-artist" value={form.artist} onChange={(event) => setForm({ ...form, artist: event.target.value })} />
                 <label htmlFor="song-url">Enlace</label>
-                <input id="song-url" type="url" placeholder="https://" value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} />
+                <input id="song-url" type="url" placeholder="https://" required value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} />
                 <label htmlFor="song-location">Lugar relacionado</label>
-                <select id="song-location" value={form.location_id} onChange={(event) => setForm({ ...form, location_id: event.target.value })}>
-                  <option value="">Sin lugar asociado</option>
+                <select id="song-location" required value={form.location_id} onChange={(event) => setForm({ ...form, location_id: event.target.value })}>
+                  <option value="">Elegí un lugar</option>
                   {locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
                 </select>
                 <label htmlFor="song-description">Descripción</label>
@@ -329,7 +377,7 @@ function AdminPanel({ locations, onClose, onCatalogChanged, supabase }) {
             {notice && <p className="account-message" role="status">{notice}</p>}
             <div className="admin-form-actions">
               {editingId && <button className="admin-cancel" type="button" onClick={() => { setEditingId(null); setForm(activeTab === 'locations' ? blankLocation : activeTab === 'songs' ? blankSong : blankRoute); }}>Cancelar</button>}
-              <button className="account-submit" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
+              <button className="account-submit" type="submit" disabled={saving}>{saving ? 'Guardando…' : editingId ? 'Actualizar' : 'Guardar'}</button>
             </div>
           </form>
         </div>

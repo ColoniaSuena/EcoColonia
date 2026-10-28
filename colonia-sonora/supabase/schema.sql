@@ -13,6 +13,7 @@ create table if not exists public.locations (
   latitude double precision not null check (latitude between -90 and 90),
   longitude double precision not null check (longitude between -180 and 180),
   details text not null default '',
+  media_url text not null default '',
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -157,6 +158,6 @@ values
   ('00000000-0000-4000-8000-000000000001', 'Barrio Histórico', 'cancion', 'Canción sobre el lugar', -34.4719, -57.8579, 'Letras y canciones que nombran las calles, la historia o la vida del barrio.'),
   ('00000000-0000-4000-8000-000000000002', 'Faro de Colonia', 'artista', 'Artista de la zona', -34.4717, -57.8515, 'Una búsqueda abierta de artistas nacidos en Colonia y sus alrededores.'),
   ('00000000-0000-4000-8000-000000000003', 'Real de San Carlos', 'videoclip', 'Videoclip filmado aquí', -34.4385, -57.8425, 'Videoclips y sesiones musicales registrados en este rincón de la ciudad.'),
-  ('00000000-0000-4000-8000-000000000004', 'Rambla de Colonia', 'cancion', 'Canción sobre el lugar', -34.474, -57.846, 'https://www.youtube.com/watch?v=8nx-G-VMt5A'),
+  ('00000000-0000-4000-8000-000000000004', 'Rambla de Colonia', 'videoclip', 'Videoclip filmado aquí', -34.441478, -57.869365, 'https://youtu.be/8_CcdCDMkcw?si=Rbzj-cxehUK_0bnp'),
   ('00000000-0000-4000-8000-000000000005', 'Luana', 'artista', 'Artista de Colonia', -34.450060, -57.816829, 'Luana Persincula, conocida artísticamente como Luana.')
 on conflict (id) do nothing;
