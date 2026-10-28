@@ -282,7 +282,16 @@ function App() {
           <div>
             <p className="eyebrow">GEOGRAFÍA EN FRECUENCIA</p>
             <h1 id="page-title">La ciudad tiene <em>su canción.</em></h1>
-            <p className="intro-copy">Elegí un punto del mapa y encontrá la música que vive ahí.</p>
+            <div className="intro-copy">
+              <h2>Descubrí Colonia a través de su música</h2>
+              <p>
+                Un recorrido interactivo por la identidad musical de Colonia del Sacramento.
+                Explorá su mapa y descubrí canciones que reflejan la historia, la cultura y
+                las vivencias de sus barrios, conectando cada rincón con los sonidos que
+                forman parte de su identidad.
+              </p>
+              <p>Colonia tiene historias que contar y canciones que las hacen sonar.</p>
+            </div>
           </div>
           <div className="map-index" aria-label={`${lugaresVisibles.length} lugares en el mapa`}>
             <span className="map-index-number">0{lugaresVisibles.length}</span>
